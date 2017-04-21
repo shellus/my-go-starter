@@ -25,8 +25,9 @@ func main() {
 字符串，数值转换
  */
 func convert() {
-	i, _ := strconv.Atoi("123")
-	fmt.Printf("convert to int: %d \n", i)
+
+	myi, _ := strconv.Atoi("123")
+	fmt.Printf("convert to int: %d \n", myi)
 
 	fmt.Printf("convert to int string: %s \n", strconv.Itoa(123))
 
@@ -35,12 +36,20 @@ func convert() {
 
 	mystring := "abc"
 	fmt.Printf("convert to bytes: %s \n", []byte(mystring))
+
+	b, _ := strconv.ParseBool("true")
+	f, _ := strconv.ParseFloat("3.1415", 64)
+	i, _ := strconv.ParseInt("-42", 10, 64)
+	u, _ := strconv.ParseUint("42", 10, 64)
+
+	fmt.Print(b,f,i,u)
 }
 /*
 链表及字节数组
 反射获取类型
  */
 func mylist() {
+
 	l := list.New()
 
 	bs := []byte{'a', 'b', 'c'}
