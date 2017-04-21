@@ -5,10 +5,10 @@ import (
 	"os"
 	"container/list"
 	"reflect"
+	"strconv"
 )
 
 func main() {
-
 
 	//stringcom()
 	//calc()
@@ -17,32 +17,48 @@ func main() {
 	//ex()
 	//mytype()
 	//slice()
-	mylist()
+	//mylist()
+	convert()
+}
+
+/**
+字符串，数值转换
+ */
+func convert() {
+	i, _ := strconv.Atoi("123")
+	fmt.Printf("convert to int: %d \n", i)
+
+	fmt.Printf("convert to int string: %s \n", strconv.Itoa(123))
+
+	bytes := []byte{'a', 'b', 'c'}
+	fmt.Printf("convert to string: %s \n", string(bytes))
+
+	mystring := "abc"
+	fmt.Printf("convert to bytes: %s \n", []byte(mystring))
 }
 /*
 链表及字节数组
 反射获取类型
  */
-func mylist(){
+func mylist() {
 	l := list.New()
 
 	bs := []byte{'a', 'b', 'c'}
 
-
 	fmt.Print(reflect.TypeOf(string(bs)))
 
-	fmt.Print(l.Back().Value.(string)+"\n")
+	fmt.Print(l.Back().Value.(string) + "\n")
 
-	fmt.Print(string(bs)+"\n")
+	fmt.Print(string(bs) + "\n")
 
 }
 
 /*
 动态数组（slice）
  */
-func slice(){
-	lines := []string{"1","2"}
-	lines = append(lines,"3")
+func slice() {
+	lines := []string{"1", "2"}
+	lines = append(lines, "3")
 	fmt.Print(lines);
 }
 
@@ -59,7 +75,7 @@ func stringcom() {
 /*
 数值计算
  */
-func calc(){
+func calc() {
 	a, b, c := 1, 2, 3
 
 	n := a + b + c;
@@ -70,16 +86,15 @@ func calc(){
 /*
 数组操作
  */
-func array(){
-	a := [...]int{0,1,2,3,4,5,6,7,8}
-
+func array() {
+	a := [...]int{0, 1, 2, 3, 4, 5, 6, 7, 8}
 
 	_ = a[3:4]
 
 	fmt.Print(len(a));
 }
 
-func mymap(){
+func mymap() {
 	//var numbers map[string]int
 	// 另一种map的声明方式
 	numbers := make(map[string]int)
@@ -89,14 +104,13 @@ func mymap(){
 
 	fmt.Println("第三个数字是: ", numbers["three"]) // 读取数据
 
-	for k, _ := range numbers{
+	for k, _ := range numbers {
 		fmt.Print(k)
 	}
 
 }
 
-
-func ex(){
+func ex() {
 	defer func() {
 		if err := recover(); err != nil {
 			_ = true
@@ -112,10 +126,10 @@ func ext() {
 	}
 }
 
-func mytype(){
+func mytype() {
 	type person struct {
 		name string
-		age int
+		age  int
 	}
 
 	p := person{"abc", 18}
