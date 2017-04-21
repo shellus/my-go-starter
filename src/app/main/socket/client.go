@@ -4,20 +4,32 @@ import (
 	"fmt"
 	"net"
 	"bufio"
+	"runtime"
 )
+type Request struct {
+	addr string
+	method string
+	path string
+	proto string
+	headers []string
+}
+type Response struct{
+	data []byte
+	data_len int
+}
 
 func main() {
-	proto := "HTTP/1.1"
+	request := Request{}
 
-	path := "/"
+	request.proto = "HTTP/1.1"
 
-	method := "GET"
+	request.path = "/"
 
-	addr := "127.0.0.1:80"
+	request.method = "GET"
 
-	eol := "\r\n"
+	request.addr = "127.0.0.1:80"
 
-	headers := []string{
+	request.headers = []string{
 		"Host: 127.0.0.1",
 		"Connection: keep-alive",
 		"Cache-Control: max-age=0",
@@ -27,25 +39,44 @@ func main() {
 		//"Accept-Encoding: gzip, deflate, sdch, br",
 		"Accept-Language: zh-CN,zh;q=0.8",
 	}
+	c := make(chan Response);
+	for i := 0; i < 10; i++ {
+		go http_request(request, c)
+	}
 
-	tcpAddr, _ := net.ResolveTCPAddr("tcp4", addr)
+	n:=0
+	for response := range c {
+		n++
+		fmt.Printf("response.data_len %d %d \n", response.data_len, n)
+	}
 
-	conn, _ := net.DialTCP("tcp", nil, tcpAddr)
+
+}
+
+func http_request(request Request, c chan Response){
+	eol := "\r\n"
+	tcpAddr, _ := net.ResolveTCPAddr("tcp4", request.addr)
+
+	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 
 	buf := bufio.NewWriter(conn);
 
-	buf.WriteString(method + " " + path + " " + proto + eol)
+	for err == nil {
+		buf.WriteString(request.method + " " + request.path + " " + request.proto + eol)
 
-	for i := 0; i < len(headers); i++ {
-		buf.WriteString(headers[i] + eol)
+		for i := 0; i < len(request.headers); i++ {
+			buf.WriteString(request.headers[i] + eol)
+		}
+		buf.WriteString(eol)
+
+		buf.Flush()
+
+		buf_r := make([]byte, 2014)
+
+		recv_len, _ := conn.Read(buf_r)
+
+		c <- Response{data:buf_r, data_len:recv_len}
+
+		runtime.Gosched()
 	}
-	buf.WriteString(eol)
-
-	buf.Flush()
-
-	buf_r := make([]byte, 2014)
-
-	recv_len, _ := conn.Read(buf_r)
-
-	fmt.Printf("over %d : %s", recv_len, buf_r)
 }
