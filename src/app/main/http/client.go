@@ -30,13 +30,20 @@ func main() {
 func work(ir int, i chan int, o chan O) {
 	for {
 		var url string
-		url = "https://segmentfault.com/questions"
+		url = "https://laravel-china.org/"
 		resp, err := http.Get(url)
 
 		if err != nil {
 			fmt.Print(err)
+			continue
 		}
-		body, _ := ioutil.ReadAll(resp.Body)
+
+		body, err := ioutil.ReadAll(resp.Body)
+
+		if err != nil {
+			fmt.Print(err)
+			continue
+		}
 
 		o <- O{body_len:len(body),ir:ir,status:resp.Status}
 	}
