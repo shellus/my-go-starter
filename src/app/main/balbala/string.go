@@ -42,7 +42,7 @@ func convert() {
 	i, _ := strconv.ParseInt("-42", 10, 64)
 	u, _ := strconv.ParseUint("42", 10, 64)
 
-	fmt.Print(b,f,i,u)
+	fmt.Print(b, f, i, u)
 }
 /*
 链表及字节数组
