@@ -6,6 +6,9 @@ default: client
 client:
 	go install -tags 'release' http
 
+window:
+	go install -tags 'release' win32api/createWindow
+
 test:
 	go install -tags 'release' test
 
