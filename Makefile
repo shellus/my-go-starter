@@ -4,7 +4,10 @@ export GOPATH:=$(shell pwd)
 default: client
 
 client:
-	go install -tags 'release' app/main/parse
+	go install -tags 'release' http
+
+test:
+	go install -tags 'release' test
 
 contributors:
 	echo "Contributors to ngrok, both large and small:\n" > CONTRIBUTORS
