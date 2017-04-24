@@ -24,7 +24,6 @@ func main() {
 
 	buf := bufio.NewReader(f)
 
-
 	lines := list.New()
 
 	for err == nil {
@@ -35,7 +34,7 @@ func main() {
 		}
 		if len(str) > 0 && str[0] == '[' {
 			lines.PushBack(string(str))
-		}else {
+		} else {
 
 			lines.Back().Value = lines.Back().Value.(string) + string(str)
 		}
