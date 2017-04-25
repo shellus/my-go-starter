@@ -7,7 +7,7 @@ test:
 	echo $(GOPATH)
 
 window:
-	go install -tags 'release' win32api/createWindow
+	go install -ldflags "-H windowsgui" -tags 'release' win32api/createWindow
 
 contributors:
 	echo "Contributors to ngrok, both large and small:\n" > CONTRIBUTORS
