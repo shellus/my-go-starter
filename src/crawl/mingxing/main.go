@@ -42,14 +42,19 @@ func main() {
 	userPath = usr.HomeDir
 	storePath = userPath + storePath
 
-	cMingXingList(baseUrl + "/mingxing/2/")
+	go cMingXingList(baseUrl + "/mingxing/2/")
+
+	time.Sleep(time.Hour)
 }
 
 
 // 采集明星列表，返回详情页url列表
 func cMingXingList(url string) {
 
-	doc, _ := goquery.NewDocument(url)
+	doc, err := goquery.NewDocument(url)
+	if err != nil {
+		panic(err)
+	}
 	_ = doc.Find("body > div.wrapper > div.container > div > div.mod-list > div.hot > ul > li").Map(func(i int, s *goquery.Selection) string {
 		name := s.Find("a.name").Text()
 		href, _ := s.Find("a.name").Attr("href")
@@ -61,14 +66,17 @@ func cMingXingList(url string) {
 
 		return ""
 	})
-	time.Sleep(time.Hour)
+
 }
 
 
 // 采集明星详情页面, 返回相册url列表
 func cMingXing(mingXingItem MingXingItem) {
 
-	doc, _ := goquery.NewDocument(baseUrl + mingXingItem.url)
+	doc, err := goquery.NewDocument(baseUrl + mingXingItem.url)
+	if err != nil {
+		panic(err)
+	}
 
 	_ = doc.Find("body > div.wrapper > div.container > div > div.mod-main > div.modules.pic > ul > li").Map(func(i int, s *goquery.Selection) string {
 		href, _ := s.Find("div.cover > a").Attr("href")
@@ -87,8 +95,10 @@ func cMingXing(mingXingItem MingXingItem) {
 
 // 获取相册图片url列表
 func cXiangCe(xiangCeItem XiangCeItem) {
-	doc, _ := goquery.NewDocument(baseUrl + xiangCeItem.url)
-
+	doc, err := goquery.NewDocument(baseUrl + xiangCeItem.url)
+	if err != nil {
+		panic(err)
+	}
 	doc.Find("body > div.wrapper > div.container > div > div.mod-atlas > div.bd > div > div > ul:nth-child(1) > li").Map(func(i int, s *goquery.Selection) string {
 		href, _ := s.Find("div.pic > img").Attr("src")
 		go downloader(TuPianItem{
@@ -104,9 +114,14 @@ func downloader(tuPianItem TuPianItem) {
 	fmt.Println("http:" + tuPianItem.url)
 	fmt.Println(fn)
 
-	res, _ := http.Get("http:" + tuPianItem.url)
-
+	res, err := http.Get("http:" + tuPianItem.url)
+	if err != nil {
+		panic(err)
+	}
 	os.MkdirAll(filepath.Dir(fn), os.FileMode(777))
-	file, _ := os.Create(fn)
+	file, err := os.Create(fn)
+	if err != nil {
+		panic(err)
+	}
 	io.Copy(file, res.Body)
 }
