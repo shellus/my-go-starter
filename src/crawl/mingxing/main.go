@@ -9,7 +9,7 @@ import (
 	"io"
 	"path/filepath"
 	"os/user"
-	"time"
+	"sync"
 )
 
 // 明星详情页结构
@@ -33,9 +33,12 @@ var userPath string
 var storePath = `/Pictures/明星图片`
 var baseUrl = "https://www.houyuantuan.com"
 
-var timer_cMingXing = time.NewTicker(1 * time.Second)
-var timer_cXiangCe = time.NewTicker(1 * time.Second)
-var timer_downloader = time.NewTicker(100 * time.Millisecond)
+var rateLimit_cMingXingList = make(chan bool, 3)
+var rateLimit_cMingXing = make(chan bool, 3)
+var rateLimit_cXiangCe = make(chan bool, 10)
+var rateLimit_downloader = make(chan bool, 30)
+
+var exit_sync sync.WaitGroup
 
 func main() {
 
@@ -46,15 +49,21 @@ func main() {
 	userPath = usr.HomeDir
 	storePath = userPath + storePath
 
+	exit_sync.Add(1)
+	rateLimit_cMingXingList <- true
 	go cMingXingList(baseUrl + "/mingxing/2/")
 
-	time.Sleep(time.Hour)
+	exit_sync.Wait()
 }
 
 
 // 采集明星列表，返回详情页url列表
 func cMingXingList(url string) (err error) {
 
+	defer func() {
+		exit_sync.Add(-1)
+		<- rateLimit_cMingXingList
+	}()
 	doc, err := goquery.NewDocument(url)
 	if err != nil {
 		return
@@ -62,8 +71,9 @@ func cMingXingList(url string) (err error) {
 	_ = doc.Find("body > div.wrapper > div.container > div > div.mod-list > div.hot > ul > li").Map(func(i int, s *goquery.Selection) string {
 		name := s.Find("a.name").Text()
 		href, _ := s.Find("a.name").Attr("href")
+		exit_sync.Add(1)
 
-		<-timer_cMingXing.C
+		rateLimit_cMingXing <- true
 		go cMingXing(MingXingItem{
 			name: name,
 			url: href,
@@ -79,6 +89,10 @@ func cMingXingList(url string) (err error) {
 // 采集明星详情页面, 返回相册url列表
 func cMingXing(mingXingItem MingXingItem) (err error) {
 
+	defer func() {
+		exit_sync.Add(-1)
+		<- rateLimit_cMingXing
+	}()
 	doc, err := goquery.NewDocument(baseUrl + mingXingItem.url)
 	if err != nil {
 		return
@@ -88,8 +102,9 @@ func cMingXing(mingXingItem MingXingItem) (err error) {
 		href, _ := s.Find("div.cover > a").Attr("href")
 
 		name := s.Find("div.cover-title > p > a").Text()
+		exit_sync.Add(1)
 
-		<-timer_cXiangCe.C
+		rateLimit_cXiangCe <- true
 		go cXiangCe(XiangCeItem{
 			mingXingItem: &mingXingItem,
 			name: name,
@@ -103,14 +118,21 @@ func cMingXing(mingXingItem MingXingItem) (err error) {
 
 // 获取相册图片url列表
 func cXiangCe(xiangCeItem XiangCeItem) (err error) {
+
+	defer func() {
+		exit_sync.Add(-1)
+		<- rateLimit_cXiangCe
+	}()
+
 	doc, err := goquery.NewDocument(baseUrl + xiangCeItem.url)
 	if err != nil {
 		return
 	}
 	doc.Find("body > div.wrapper > div.container > div > div.mod-atlas > div.bd > div > div > ul:nth-child(1) > li").Map(func(i int, s *goquery.Selection) string {
 		href, _ := s.Find("div.pic > img").Attr("src")
+		exit_sync.Add(1)
 
-		<-timer_downloader.C
+		rateLimit_downloader <- true
 		go downloader(TuPianItem{
 			xiangCeItem: &xiangCeItem,
 			url: href,
@@ -121,6 +143,12 @@ func cXiangCe(xiangCeItem XiangCeItem) (err error) {
 }
 
 func downloader(tuPianItem TuPianItem) (err error) {
+
+	defer func() {
+		exit_sync.Add(-1)
+		<- rateLimit_downloader
+	}()
+
 	fn := storePath + "\\" + tuPianItem.xiangCeItem.mingXingItem.name + "\\" + tuPianItem.xiangCeItem.name + "\\" + path.Base(tuPianItem.url)
 	fmt.Println("http:" + tuPianItem.url)
 	fmt.Println(fn)
