@@ -33,10 +33,10 @@ var userPath string
 var storePath = `/Pictures/明星图片`
 var baseUrl = "https://www.houyuantuan.com"
 
-var rateLimit_cMingXingList = make(chan bool, 3)
-var rateLimit_cMingXing = make(chan bool, 3)
+var rateLimit_cMingXingList = make(chan bool, 5)
+var rateLimit_cMingXing = make(chan bool, 5)
 var rateLimit_cXiangCe = make(chan bool, 10)
-var rateLimit_downloader = make(chan bool, 30)
+var rateLimit_downloader = make(chan bool, 50)
 
 var exit_sync sync.WaitGroup
 
@@ -63,10 +63,13 @@ func cMingXingList(url string) (err error) {
 	defer func() {
 		exit_sync.Add(-1)
 		<- rateLimit_cMingXingList
+		if err := recover(); err != nil {
+			fmt.Print(err)
+		}
 	}()
 	doc, err := goquery.NewDocument(url)
 	if err != nil {
-		return
+		panic(err)
 	}
 	_ = doc.Find("body > div.wrapper > div.container > div > div.mod-list > div.hot > ul > li").Map(func(i int, s *goquery.Selection) string {
 		name := s.Find("a.name").Text()
@@ -92,10 +95,13 @@ func cMingXing(mingXingItem MingXingItem) (err error) {
 	defer func() {
 		exit_sync.Add(-1)
 		<- rateLimit_cMingXing
+		if err := recover(); err != nil {
+			fmt.Print(err)
+		}
 	}()
 	doc, err := goquery.NewDocument(baseUrl + mingXingItem.url)
 	if err != nil {
-		return
+		panic(err)
 	}
 
 	_ = doc.Find("body > div.wrapper > div.container > div > div.mod-main > div.modules.pic > ul > li").Map(func(i int, s *goquery.Selection) string {
@@ -122,11 +128,14 @@ func cXiangCe(xiangCeItem XiangCeItem) (err error) {
 	defer func() {
 		exit_sync.Add(-1)
 		<- rateLimit_cXiangCe
+		if err := recover(); err != nil {
+			fmt.Print(err)
+		}
 	}()
 
 	doc, err := goquery.NewDocument(baseUrl + xiangCeItem.url)
 	if err != nil {
-		return
+		panic(err)
 	}
 	doc.Find("body > div.wrapper > div.container > div > div.mod-atlas > div.bd > div > div > ul:nth-child(1) > li").Map(func(i int, s *goquery.Selection) string {
 		href, _ := s.Find("div.pic > img").Attr("src")
@@ -147,6 +156,9 @@ func downloader(tuPianItem TuPianItem) (err error) {
 	defer func() {
 		exit_sync.Add(-1)
 		<- rateLimit_downloader
+		if err := recover(); err != nil {
+			fmt.Print(err)
+		}
 	}()
 
 	fn := storePath + "\\" + tuPianItem.xiangCeItem.mingXingItem.name + "\\" + tuPianItem.xiangCeItem.name + "\\" + path.Base(tuPianItem.url)
@@ -155,12 +167,12 @@ func downloader(tuPianItem TuPianItem) (err error) {
 
 	res, err := http.Get("http:" + tuPianItem.url)
 	if err != nil {
-		return
+		panic(err)
 	}
 	os.MkdirAll(filepath.Dir(fn), os.FileMode(644))
 	file, err := os.Create(fn)
 	if err != nil {
-		return
+		panic(err)
 	}
 	io.Copy(file, res.Body)
 
