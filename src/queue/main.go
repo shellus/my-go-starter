@@ -1,38 +1,27 @@
-package main
+package queue
 
 import (
-	"time"
-	"container/list"
 )
 
 type Queue struct {
-	jobs list.List
+	jobChan chan Job
 }
 type Job struct {
 
 }
 
 func NewQueue() Queue {
-
 	return Queue{
-		jobs: list.New(),
-	}
-}
-func (q Queue) push(j Job){
-	append(q.jobs, j)
-}
-
-func (q Queue) sub(f func(j Job)){
-
-
-
-	for{
-		q.jobs.Front()
-		time.Sleep(1 * time.Second)
+		jobChan: make(chan Job),
 	}
 }
 
+func (q Queue) Push(j Job) {
+	q.jobChan <- j
+}
 
-func main() {
-
+func (q Queue) Sub(f func(j Job)) {
+	for j := range q.jobChan{
+		f(j)
+	}
 }
