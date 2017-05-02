@@ -30,12 +30,12 @@ func queue_test(){
 
 	// 订阅
 	q.Sub(func(j queue.Job) {
+		time.Sleep(time.Millisecond * 100)
 		fmt.Println(j.Value.(string))
-		time.Sleep(time.Second)
 	})
 
 	// 发布
-	for i:=0; i<100 ;i++ {
+	for i:=0; i<10 ;i++ {
 		q.Push(queue.Job{Value:fmt.Sprintf("lalala: %d", i)})
 	}
 
