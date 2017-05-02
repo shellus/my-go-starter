@@ -71,6 +71,7 @@ func main() {
 	fmt.Println("图片采集完毕")
 }
 
+// 获取保存目录
 func initPath() {
 	usr, err := user.Current()
 	if err != nil {
@@ -90,7 +91,7 @@ func cMingXingList(url string) {
 	}
 
 	doc.Find("body > div.wrapper > div.container > div > div.mod-list > div.hot > ul > li").
-		Map(func(i int, s *goquery.Selection) string {
+		Each(func(_ int, s *goquery.Selection) {
 		name := s.Find("a.name").Text()
 		href, _ := s.Find("a.name").Attr("href")
 
@@ -100,8 +101,6 @@ func cMingXingList(url string) {
 				name: name,
 				url: href,
 			}})
-
-		return ""
 	})
 }
 
@@ -115,7 +114,7 @@ func cMingXing(mingXingItem MingXingItem) {
 	}
 
 	doc.Find("body > div.wrapper > div.container > div > div.mod-main > div.modules.pic > ul > li").
-		Map(func(i int, s *goquery.Selection) string {
+		Each(func(_ int, s *goquery.Selection) {
 		href, _ := s.Find("div.cover > a").Attr("href")
 
 		name := s.Find("div.cover-title > p > a").Text()
@@ -128,7 +127,6 @@ func cMingXing(mingXingItem MingXingItem) {
 				url: href,
 			}})
 
-		return ""
 	})
 }
 
@@ -142,7 +140,7 @@ func cXiangCe(xiangCeItem XiangCeItem) {
 	}
 
 	doc.Find("body > div.wrapper > div.container > div > div.mod-atlas > div.bd > div > div > ul:nth-child(1) > li").
-		Map(func(i int, s *goquery.Selection) string {
+		Each(func(_ int, s *goquery.Selection) {
 		href, _ := s.Find("div.pic > img").Attr("src")
 
 		q_downloader.Push(queue.Job{
@@ -152,10 +150,10 @@ func cXiangCe(xiangCeItem XiangCeItem) {
 				url: href,
 			}})
 
-		return ""
 	})
 }
 
+// 下载图片文件
 func downloader(tuPianItem TuPianItem) {
 
 	fn := storePath + "\\" + tuPianItem.xiangCeItem.mingXingItem.name + "\\" + tuPianItem.xiangCeItem.name + "\\" + path.Base(tuPianItem.url)
