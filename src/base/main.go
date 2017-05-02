@@ -6,6 +6,8 @@ import (
 	"container/list"
 	"reflect"
 	"strconv"
+	"queue"
+	"time"
 )
 
 func main() {
@@ -18,9 +20,29 @@ func main() {
 	//mytype()
 	//slice()
 	//mylist()
-	convert()
+	//convert()
+	queue_test()
 }
+func queue_test(){
 
+	// 并发2
+	q := queue.NewQueue(2)
+
+	// 订阅
+	q.Sub(func(j queue.Job) {
+		fmt.Println(j.Value.(string))
+		time.Sleep(time.Second)
+	})
+
+	// 发布
+	for i:=0; i<100 ;i++ {
+		q.Push(queue.Job{Value:fmt.Sprintf("lalala: %d", i)})
+	}
+
+	// 开始工作
+	q.Work()
+
+}
 /**
 字符串，数值转换
  */
