@@ -14,40 +14,163 @@ import (
 	"strings"
 )
 
-// 明星详情页结构
-type MingXingItem struct {
-	name string
-	url  string
-}
-// 相册结构
-type XiangCeItem struct {
-	mingXingItem *MingXingItem
-	name         string
-	url          string
-}
-// 图片结构
-type TuPianItem struct {
-	xiangCeItem *XiangCeItem
-	url         string
-}
 
-var userPath string
-var storePath = `/Pictures/明星图片`
-var baseUrl = "https://www.houyuantuan.com"
 
-var q_cMingXingList = queue.NewQueue(1)
-var q_cMingXing = queue.NewQueue(1)
-var q_cXiangCe = queue.NewQueue(1)
-var q_downloader = queue.NewQueue(1)
+
 
 func main() {
 
-	initPath()
+	// 明星详情页结构
+	type MingXingItem struct {
+		name string
+		url  string
+	}
+	// 相册结构
+	type XiangCeItem struct {
+		mingXingItem *MingXingItem
+		name         string
+		url          string
+	}
+	// 图片结构
+	type TuPianItem struct {
+		xiangCeItem *XiangCeItem
+		url         string
+	}
 
-	q_cMingXingList.Sub(cMingXingList)
-	q_cMingXing.Sub(cMingXing)
-	q_cXiangCe.Sub(cXiangCe)
-	q_downloader.Sub(downloader)
+	var userPath string
+	var storePath = `/Pictures/明星图片`
+	var baseUrl = "https://www.houyuantuan.com"
+
+	usr, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+	userPath = usr.HomeDir
+	storePath = userPath + storePath
+
+	var q_cMingXingList = queue.NewQueue(1)
+	var q_cMingXing = queue.NewQueue(1)
+	var q_cXiangCe = queue.NewQueue(1)
+	var q_downloader = queue.NewQueue(1)
+
+	q_cMingXingList.Sub(func (j queue.Job) {
+		url := j.Value.(string)
+
+		doc, err := goquery.NewDocument(url)
+		if err != nil {
+			panic(err)
+		}
+
+		doc.Find("body > div.wrapper > div.container > div > div.mod-list > div.hot > ul > li").
+			Each(func(_ int, s *goquery.Selection) {
+			name := s.Find("a.name").Text()
+			href, _ := s.Find("a.name").Attr("href")
+
+			q_cMingXing.Push(queue.Job{
+				Value:
+				MingXingItem{
+					name: name,
+					url: href,
+				}})
+			fmt.Println(name)
+		})
+		doc.Find("body > div.wrapper > div.container > div > div.mod-list > div.list > ul > li").
+			Each(func(_ int, s *goquery.Selection) {
+			name := s.Find("a").Text()
+			href, _ := s.Find("a").Attr("href")
+			name = strings.TrimSpace(name)
+
+			q_cMingXing.Push(queue.Job{
+				Value:
+				MingXingItem{
+					name: name,
+					url: href,
+				}})
+			fmt.Println(name)
+		})
+	})
+
+	q_cMingXing.Sub(func (j queue.Job) {
+		mingXingItem := j.Value.(MingXingItem)
+
+		if mingXingItem.name == "李宇春" {
+
+			return
+		}
+
+		doc, err := goquery.NewDocument(baseUrl + mingXingItem.url)
+		if err != nil {
+			panic(err)
+		}
+
+		doc.Find("body > div.wrapper > div.container > div > div.mod-main > div.modules.pic > ul > li").
+			Each(func(_ int, s *goquery.Selection) {
+			href, _ := s.Find("div.cover > a").Attr("href")
+
+			name := s.Find("div.cover-title > p > a").Text()
+
+			q_cXiangCe.Push(queue.Job{
+				Value:
+				XiangCeItem{
+					mingXingItem: &mingXingItem,
+					name: name,
+					url: href,
+				}})
+
+		})
+	})
+
+	q_cXiangCe.Sub(func (j queue.Job) {
+		xiangCeItem := j.Value.(XiangCeItem)
+
+		doc, err := goquery.NewDocument(baseUrl + xiangCeItem.url)
+		if err != nil {
+			panic(err)
+		}
+
+		doc.Find("body > div.wrapper > div.container > div > div.mod-atlas > div.bd > div > div > ul:nth-child(1) > li").
+			Each(func(_ int, s *goquery.Selection) {
+			href, _ := s.Find("div.pic > img").Attr("src")
+
+			q_downloader.Push(queue.Job{
+				Value:
+				TuPianItem{
+					xiangCeItem: &xiangCeItem,
+					url: href,
+				}})
+
+		})
+	})
+
+	q_downloader.Sub(func (j queue.Job) {
+		tuPianItem := j.Value.(TuPianItem)
+
+		fn := storePath + "\\" + tuPianItem.xiangCeItem.mingXingItem.name + "-" + tuPianItem.xiangCeItem.name + "-" + path.Base(tuPianItem.url)
+		fn, err := filepath.Abs(fn)
+		if err != nil {
+			panic(err)
+		}
+		err = os.MkdirAll(filepath.Dir(fn), os.FileMode(644))
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println("http:" + tuPianItem.url)
+		fmt.Println(fn)
+
+		res, err := http.Get("http:" + tuPianItem.url)
+		if err != nil {
+			panic(err)
+		}
+
+
+		file, err := os.Create(fn)
+		if err != nil {
+			panic(err)
+		}
+
+		io.Copy(file, res.Body)
+	})
 
 	q_cMingXingList.Push(queue.Job{Value:baseUrl + "/mingxing/2/"})
 
@@ -65,138 +188,3 @@ func main() {
 	fmt.Println("图片采集完毕")
 }
 
-// 获取保存目录
-func initPath() {
-	usr, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-	userPath = usr.HomeDir
-	storePath = userPath + storePath
-}
-
-
-// 采集明星列表
-func cMingXingList(j queue.Job) {
-	url := j.Value.(string)
-
-	doc, err := goquery.NewDocument(url)
-	if err != nil {
-		panic(err)
-	}
-
-	doc.Find("body > div.wrapper > div.container > div > div.mod-list > div.hot > ul > li").
-		Each(func(_ int, s *goquery.Selection) {
-		name := s.Find("a.name").Text()
-		href, _ := s.Find("a.name").Attr("href")
-
-		q_cMingXing.Push(queue.Job{
-			Value:
-			MingXingItem{
-				name: name,
-				url: href,
-			}})
-		fmt.Println(name)
-	})
-	doc.Find("body > div.wrapper > div.container > div > div.mod-list > div.list > ul > li").
-		Each(func(_ int, s *goquery.Selection) {
-		name := s.Find("a").Text()
-		href, _ := s.Find("a").Attr("href")
-		name = strings.TrimSpace(name)
-
-		q_cMingXing.Push(queue.Job{
-			Value:
-			MingXingItem{
-				name: name,
-				url: href,
-			}})
-		fmt.Println(name)
-	})
-}
-
-
-// 采集女明星详情页面
-func cMingXing(j queue.Job) {
-	mingXingItem := j.Value.(MingXingItem)
-
-	if mingXingItem.name == "李宇春" {
-
-		return
-	}
-
-	doc, err := goquery.NewDocument(baseUrl + mingXingItem.url)
-	if err != nil {
-		panic(err)
-	}
-
-	doc.Find("body > div.wrapper > div.container > div > div.mod-main > div.modules.pic > ul > li").
-		Each(func(_ int, s *goquery.Selection) {
-		href, _ := s.Find("div.cover > a").Attr("href")
-
-		name := s.Find("div.cover-title > p > a").Text()
-
-		q_cXiangCe.Push(queue.Job{
-			Value:
-			XiangCeItem{
-				mingXingItem: &mingXingItem,
-				name: name,
-				url: href,
-			}})
-
-	})
-}
-
-
-// 获取相册图片url列表
-func cXiangCe(j queue.Job) {
-	xiangCeItem := j.Value.(XiangCeItem)
-
-	doc, err := goquery.NewDocument(baseUrl + xiangCeItem.url)
-	if err != nil {
-		panic(err)
-	}
-
-	doc.Find("body > div.wrapper > div.container > div > div.mod-atlas > div.bd > div > div > ul:nth-child(1) > li").
-		Each(func(_ int, s *goquery.Selection) {
-		href, _ := s.Find("div.pic > img").Attr("src")
-
-		q_downloader.Push(queue.Job{
-			Value:
-			TuPianItem{
-				xiangCeItem: &xiangCeItem,
-				url: href,
-			}})
-
-	})
-}
-
-// 下载图片文件
-func downloader(j queue.Job) {
-	tuPianItem := j.Value.(TuPianItem)
-
-	fn := storePath + "\\" + tuPianItem.xiangCeItem.mingXingItem.name + "-" + tuPianItem.xiangCeItem.name + "-" + path.Base(tuPianItem.url)
-	fn, err := filepath.Abs(fn)
-	if err != nil {
-		panic(err)
-	}
-	err = os.MkdirAll(filepath.Dir(fn), os.FileMode(644))
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("http:" + tuPianItem.url)
-	fmt.Println(fn)
-
-	res, err := http.Get("http:" + tuPianItem.url)
-	if err != nil {
-		panic(err)
-	}
-
-
-	file, err := os.Create(fn)
-	if err != nil {
-		panic(err)
-	}
-
-	io.Copy(file, res.Body)
-}
