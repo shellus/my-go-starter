@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"os/user"
 	"queue"
+	"time"
+	"strings"
 )
 
 // 明星详情页结构
@@ -30,13 +32,13 @@ type TuPianItem struct {
 }
 
 var userPath string
-var storePath 	= `/Pictures/明星图片`
-var baseUrl 	= "https://www.houyuantuan.com"
+var storePath = `/Pictures/明星图片`
+var baseUrl = "https://www.houyuantuan.com"
 
-var q_cMingXingList 	= queue.NewQueue(5)
-var q_cMingXing 	= queue.NewQueue(10)
-var q_cXiangCe 		= queue.NewQueue(50)
-var q_downloader 	= queue.NewQueue(200)
+var q_cMingXingList = queue.NewQueue(1)
+var q_cMingXing = queue.NewQueue(1)
+var q_cXiangCe = queue.NewQueue(1)
+var q_downloader = queue.NewQueue(1)
 
 func main() {
 
@@ -57,6 +59,7 @@ func main() {
 
 	q_cXiangCe.Work()
 	fmt.Println("相册采集完毕")
+	time.Sleep(time.Second)
 
 	q_downloader.Work()
 	fmt.Println("图片采集完毕")
@@ -93,13 +96,33 @@ func cMingXingList(j queue.Job) {
 				name: name,
 				url: href,
 			}})
+		fmt.Println(name)
+	})
+	doc.Find("body > div.wrapper > div.container > div > div.mod-list > div.list > ul > li").
+		Each(func(_ int, s *goquery.Selection) {
+		name := s.Find("a").Text()
+		href, _ := s.Find("a").Attr("href")
+		name = strings.TrimSpace(name)
+
+		q_cMingXing.Push(queue.Job{
+			Value:
+			MingXingItem{
+				name: name,
+				url: href,
+			}})
+		fmt.Println(name)
 	})
 }
 
 
-// 采集明星详情页面
+// 采集女明星详情页面
 func cMingXing(j queue.Job) {
 	mingXingItem := j.Value.(MingXingItem)
+
+	if mingXingItem.name == "李宇春" {
+
+		return
+	}
 
 	doc, err := goquery.NewDocument(baseUrl + mingXingItem.url)
 	if err != nil {
@@ -151,9 +174,12 @@ func cXiangCe(j queue.Job) {
 func downloader(j queue.Job) {
 	tuPianItem := j.Value.(TuPianItem)
 
-	fn := storePath + "\\" + tuPianItem.xiangCeItem.mingXingItem.name + "\\" + tuPianItem.xiangCeItem.name + "\\" + path.Base(tuPianItem.url)
-
-	err := os.MkdirAll(filepath.Dir(fn), os.FileMode(644))
+	fn := storePath + "\\" + tuPianItem.xiangCeItem.mingXingItem.name + "-" + tuPianItem.xiangCeItem.name + "-" + path.Base(tuPianItem.url)
+	fn, err := filepath.Abs(fn)
+	if err != nil {
+		panic(err)
+	}
+	err = os.MkdirAll(filepath.Dir(fn), os.FileMode(644))
 	if err != nil {
 		panic(err)
 	}
