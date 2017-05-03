@@ -30,31 +30,22 @@ type TuPianItem struct {
 }
 
 var userPath string
-var storePath = `/Pictures/明星图片`
-var baseUrl = "https://www.houyuantuan.com"
+var storePath 	= `/Pictures/明星图片`
+var baseUrl 	= "https://www.houyuantuan.com"
 
-var q_cMingXingList = queue.NewQueue(5)
-var q_cMingXing = queue.NewQueue(5)
-var q_cXiangCe = queue.NewQueue(10)
-var q_downloader = queue.NewQueue(50)
+var q_cMingXingList 	= queue.NewQueue(5)
+var q_cMingXing 	= queue.NewQueue(10)
+var q_cXiangCe 		= queue.NewQueue(50)
+var q_downloader 	= queue.NewQueue(200)
 
 func main() {
 
 	initPath()
 
-	q_cMingXingList.Sub(func(j queue.Job) {
-		cMingXingList(j.Value.(string))
-	})
-
-	q_cMingXing.Sub(func(j queue.Job) {
-		cMingXing(j.Value.(MingXingItem))
-	})
-	q_cXiangCe.Sub(func(j queue.Job) {
-		cXiangCe(j.Value.(XiangCeItem))
-	})
-	q_downloader.Sub(func(j queue.Job) {
-		downloader(j.Value.(TuPianItem))
-	})
+	q_cMingXingList.Sub(cMingXingList)
+	q_cMingXing.Sub(cMingXing)
+	q_cXiangCe.Sub(cXiangCe)
+	q_downloader.Sub(downloader)
 
 	q_cMingXingList.Push(queue.Job{Value:baseUrl + "/mingxing/2/"})
 
@@ -83,7 +74,8 @@ func initPath() {
 
 
 // 采集明星列表
-func cMingXingList(url string) {
+func cMingXingList(j queue.Job) {
+	url := j.Value.(string)
 
 	doc, err := goquery.NewDocument(url)
 	if err != nil {
@@ -106,7 +98,8 @@ func cMingXingList(url string) {
 
 
 // 采集明星详情页面
-func cMingXing(mingXingItem MingXingItem) {
+func cMingXing(j queue.Job) {
+	mingXingItem := j.Value.(MingXingItem)
 
 	doc, err := goquery.NewDocument(baseUrl + mingXingItem.url)
 	if err != nil {
@@ -132,7 +125,8 @@ func cMingXing(mingXingItem MingXingItem) {
 
 
 // 获取相册图片url列表
-func cXiangCe(xiangCeItem XiangCeItem) {
+func cXiangCe(j queue.Job) {
+	xiangCeItem := j.Value.(XiangCeItem)
 
 	doc, err := goquery.NewDocument(baseUrl + xiangCeItem.url)
 	if err != nil {
@@ -154,7 +148,8 @@ func cXiangCe(xiangCeItem XiangCeItem) {
 }
 
 // 下载图片文件
-func downloader(tuPianItem TuPianItem) {
+func downloader(j queue.Job) {
+	tuPianItem := j.Value.(TuPianItem)
 
 	fn := storePath + "\\" + tuPianItem.xiangCeItem.mingXingItem.name + "\\" + tuPianItem.xiangCeItem.name + "\\" + path.Base(tuPianItem.url)
 
