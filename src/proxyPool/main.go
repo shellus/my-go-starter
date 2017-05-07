@@ -1,17 +1,20 @@
 package proxyPool
 
 import (
+	"net/url"
 	"proxyPool/dataSource/cn_proxy_com"
+	"github.com/astaxie/beego/logs"
 )
 
-type ProxyAddr cn_proxy_com.ProxyAddr
 
-var c ProxyAddr
-
+var c chan string
 func Init(){
 	cn_proxy_com.PullData()
 	c = cn_proxy_com.Factory()
 }
-func GetOne() ProxyAddr{
-	return <- c
+func GetProxyUrl() *url.URL{
+	s := <- c
+	proxyUrl, _ := url.Parse("http://" + s)
+	logs.Info("use proxy addr: " + s)
+	return proxyUrl
 }

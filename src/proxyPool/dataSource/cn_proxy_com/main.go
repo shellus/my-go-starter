@@ -4,18 +4,13 @@ import (
 	"net/http"
 	"io/ioutil"
 	"regexp"
-	"strconv"
 )
 
-type ProxyAddr struct {
-	Ip   string
-	Port int
-}
 
-var s = []ProxyAddr{}
+var s = []string{}
 
-func Factory() (o chan ProxyAddr) {
-	o = make(chan ProxyAddr)
+func Factory() (o chan string) {
+	o = make(chan string)
 	go func() {
 		for {
 			for _, n := range s {
@@ -42,16 +37,7 @@ func PullData() (err error) {
 
 	r := regexp.MustCompile(`<td>((\d{1,3}\.){3}\d{1,3})</td>\n<td>(\d{1,6})</td>`).FindAllSubmatch(html, -1)
 	for _, l := range r {
-
-
-		p, err := strconv.Atoi(string(l[3]))
-		if err != nil {
-			return
-		}
-
-
-
-		s = append(s, ProxyAddr{Ip:string(l[1]), Port:p})
+		s = append(s, string(l[1]) + ":" + string(l[3]))
 	}
 	return
 }
