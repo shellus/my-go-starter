@@ -1,4 +1,4 @@
-package proxyPool
+package proxy_pool
 
 import (
 	"github.com/hprose/hprose-golang/util"
