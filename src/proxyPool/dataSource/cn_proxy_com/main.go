@@ -6,22 +6,7 @@ import (
 	"regexp"
 )
 
-
-var s = []string{}
-
-func Factory() (o chan string) {
-	o = make(chan string)
-	go func() {
-		for {
-			for _, n := range s {
-				o <- n
-			}
-		}
-	}()
-	return
-}
-
-func PullData() (err error) {
+func Get() (s []string, err error) {
 
 	res, err := http.Get("http://cn-proxy.com/")
 	if err != nil {
