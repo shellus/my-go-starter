@@ -8,9 +8,25 @@ import (
 	"strconv"
 	"queue"
 	"time"
+	"crypto/md5"
+	"encoding/hex"
 )
 
+type IntArr []int
+
+func (a IntArr) sum() int {
+	s := 0
+
+	for _, i := range a {
+		s = s + i
+	}
+	return s
+}
 func main() {
+	m := md5.New()
+	m.Write([]byte{'3','2','1'})
+	b := m.Sum(nil)
+	fmt.Println(hex.EncodeToString(b))
 
 	//stringcom()
 	//calc()
@@ -21,9 +37,11 @@ func main() {
 	//slice()
 	//mylist()
 	//convert()
-	queue_test()
+	//queue_test()
+
 }
-func queue_test(){
+
+func queue_test() {
 
 	// 并发2
 	q := queue.NewQueue(2)
@@ -35,7 +53,7 @@ func queue_test(){
 	})
 
 	// 发布
-	for i:=0; i<10 ;i++ {
+	for i := 0; i < 10; i++ {
 		q.Push(queue.Job{Value:fmt.Sprintf("lalala: %d", i)})
 	}
 
@@ -43,6 +61,7 @@ func queue_test(){
 	q.Work()
 
 }
+
 /**
 字符串，数值转换
  */

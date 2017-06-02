@@ -3,7 +3,7 @@ package queue
 // go的任务队列，或者说goroutine管理器
 // 创建一个queue(NewQueue)并设置并发数，绑定一个消费者(Sub)，然后Push一堆任务。然后Work阻塞执行。执行完了之后，就会退出Work方法。
 
-type Queue struct {
+type queue struct {
 	jobs       chan Job
 	concurrent chan bool
 	subscriber func(j Job)
@@ -13,22 +13,23 @@ type Job struct {
 	Value interface{}
 }
 
-func NewQueue(concurrentNumber int) (q *Queue) {
-	q = &Queue{
+func NewQueue(concurrentNumber int, channel string) (q *queue) {
+	// channel is back
+	q = &queue{
 		concurrent: make(chan bool, concurrentNumber),
 		jobs: make(chan Job, 10000),
 	}
 	return
 }
 
-func (q *Queue) Push(j Job) {
+func (q *queue) Push(j Job) {
 	q.jobs <- j
 }
 
-func (q *Queue) Sub(f func(j Job)) {
+func (q *queue) Sub(f func(j Job)) {
 	q.subscriber = f
 }
-func (q *Queue) Work() {
+func (q *queue) Work() {
 	L:
 	for {
 		select {
@@ -44,7 +45,7 @@ func (q *Queue) Work() {
 	}
 
 }
-func (q *Queue) call(j Job) {
+func (q *queue) call(j Job) {
 	defer func() {
 		<-q.concurrent
 	}()
