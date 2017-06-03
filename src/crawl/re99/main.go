@@ -7,31 +7,16 @@ import (
 	"github.com/hprose/hprose-golang/util"
 	"os"
 	"io"
-	"github.com/wendal/errors"
+	"errors"
 	"github.com/PuerkitoBio/goquery"
 	"regexp"
 	"queue"
-	"io/ioutil"
+	"golang.org/x/net/html"
 )
 
 const baseDir string = `C:\Users\shellus\Downloads\sex\`
 
 var c = http.DefaultClient
-
-//
-//type queue struct {
-//	channel string
-//}
-//func New(channel string) queue{
-//	return &queue{channel:channel}
-//}
-//func (q queue) push(item interface{}){
-//
-//}
-//func (q queue) sub(item interface{}){
-//
-//}
-//var q = New("ItemPage")
 
 var qItemPage = queue.NewQueue(1, "ItemPage")
 
@@ -44,12 +29,24 @@ func main() {
 	//u := "http://99vv1.com/get_file/3/8d4dc711f6a07357db8998b6f334c918/68000/68763/68763.mp4"
 	//u := "http://99vv1.com/get_file/3/437fa99544f68479af41cbd43500b40b/68000/68763/68763_hq.mp4"
 	//downloadVideo(u)
-	praseItemPage("http://99vv1.com/videos/68649/644806e950cdef46d754e34b4ba04b05/")
+	praseItemPage("http://99vv1.com/videos/68901/2-720p/")
 }
 
 func praseIndexPage() {
 	u := "http://www.99vv1.com"
-	r, err := c.Get(u)
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// 必要
+	req.Header.Set("Cookie", "PHPSESSID=ged6979fa0b4vj0de00ar76vb4; _gat=1; kt_tcookie=1; _ga=GA1.2.175262314.1496382929; _gid=GA1.2.205912476.1496382929; kt_is_visited=1")
+
+	// 非必要
+	req.Header.Set("Referer", "http://www.99vv1.com/videos/68763/d35a82d8802e8b8be6ed19ed98a56c64/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36")
+
+	r, err := c.Do(req)
 	if err != nil {
 		panic(err)
 	}
@@ -83,7 +80,19 @@ func praseIndexPage() {
 }
 
 func praseItemPage(u string) {
-	r, err := c.Get(u)
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// 必要
+	req.Header.Set("Cookie", "PHPSESSID=ged6979fa0b4vj0de00ar76vb4; _gat=1; kt_tcookie=1; _ga=GA1.2.175262314.1496382929; _gid=GA1.2.205912476.1496382929; kt_is_visited=1")
+
+	// 非必要
+	req.Header.Set("Referer", "http://www.99vv1.com/videos/68763/d35a82d8802e8b8be6ed19ed98a56c64/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36")
+
+	r, err := c.Do(req)
 	if err != nil {
 		panic(err)
 	}
@@ -93,19 +102,22 @@ func praseItemPage(u string) {
 	if err != nil {
 		panic(err)
 	}
-	d,_ := ioutil.ReadAll(r.Body)
-	ioutil.WriteFile(`C:\Users\shellus\Downloads\sex\1.txt`, d, os.FileMode(777))
-	return
-	sel := doc.Find("body > div.wrapper > div.content > div > div > div.main > div.wrap-video > div > script").Eq(3)
 
-	fmt.Println(sel.Length())
-	return
+	sel := doc.Find("body > div.wrapper > div.content > div > div > div.main > div.wrap-video > div > script").Eq(1)
+
 	script, err := sel.Html()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("aaa")
+
+	reg, err := regexp.Compile(`var flashvars = \{([\s\S]*?)\}`);
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println(script)
+
+	fmt.Println("aaa")
+	fmt.Println(html.UnescapeString(reg.FindString(script)[16:]))
 }
 
 func downloadVideo(u string) (l int64) {
@@ -123,7 +135,7 @@ func downloadVideo(u string) (l int64) {
 	}
 
 	// 必要
-	req.Header.Set("Cookie", "PHPSESSID=b62sj4dfpajfffdkatkr5ffnd2; _gat=1; kt_tcookie=1; _ga=GA1.2.175262314.1496382929; _gid=GA1.2.205912476.1496382929; kt_is_visited=1")
+	req.Header.Set("Cookie", "PHPSESSID=ged6979fa0b4vj0de00ar76vb4; _gat=1; kt_tcookie=1; _ga=GA1.2.175262314.1496382929; _gid=GA1.2.205912476.1496382929; kt_is_visited=1")
 
 	// 非必要
 	req.Header.Set("Referer", "http://www.99vv1.com/videos/68763/d35a82d8802e8b8be6ed19ed98a56c64/")
