@@ -15,6 +15,7 @@ import (
 )
 
 const baseDir string = `C:\Users\shellus\Downloads\sex\`
+const baseUrl string = "http://99vv1.com/"
 
 var c = http.DefaultClient
 
@@ -24,17 +25,21 @@ var qVideoDownload = queue.NewQueue(1, "VideoDownload")
 
 func main() {
 
-	//qItemPage.Sub(func(j queue.Job){praseItemPage(j.Value.(string))})
+	qItemPage.Sub(func(j queue.Job){praseItemPage(j.Value.(string))})
+	qVideoDownload.Sub(func(j queue.Job){downloadVideo(j.Value.(string))})
 
 	//u := "http://99vv1.com/get_file/3/8d4dc711f6a07357db8998b6f334c918/68000/68763/68763.mp4"
 	//u := "http://99vv1.com/get_file/3/437fa99544f68479af41cbd43500b40b/68000/68763/68763_hq.mp4"
 	//downloadVideo(u)
-	praseItemPage("http://99vv1.com/videos/68901/2-720p/")
+	//praseItemPage(baseUrl + "videos/68901/2-720p/")
+	parseIndexPage()
+
+	qItemPage.Work()
+	qVideoDownload.Work()
 }
 
-func praseIndexPage() {
-	u := "http://www.99vv1.com"
-	req, err := http.NewRequest("GET", u, nil)
+func parseIndexPage() {
+	req, err := http.NewRequest("GET", baseUrl, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -110,14 +115,48 @@ func praseItemPage(u string) {
 		panic(err)
 	}
 
-	reg, err := regexp.Compile(`var flashvars = \{([\s\S]*?)\}`);
+	rScript, err := regexp.Compile(`var flashvars = \{([\s\S]*?)\}`)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(script)
 
-	fmt.Println("aaa")
-	fmt.Println(html.UnescapeString(reg.FindString(script)[16:]))
+	json := html.UnescapeString(rScript.FindString(script)[16:])
+	/*
+	e.g:
+{
+  video_id: '68901',
+  license_code: '$323962310688084',
+  lrc: '8d4cb6dd4dc155b3945fb45e5ea53bb0',
+  video_url: '/get_file/3/271eae19e43854870ff86e424b13108f/68000/68901/68901.mp4/',
+  postfix: '.mp4',
+  video_url_text: 'LQ',
+  video_alt_url: '/get_file/3/5e26a658e558eaff0f57cae7ba4476a6/68000/68901/68901_hq.mp4/',
+  video_alt_url_text: 'HD',
+  preview_url: 'http://www.99vv1.com/contents/videos_screenshots/68000/68901/preview.mp4.jpg',
+  skin: '1',
+  video_click_url: 'http://www.99kk3.com',
+  bt: '5',
+  hide_controlbar: '0',
+  mlogo: '久久热',
+  mlogo_link: 'http://www.99kk3.com',
+  disable_selected_slot_restoring: 'true',
+  adreplay: 'true',
+  disable_preview_resize: 'true',
+  embed: '1'
+}
+	 */
+
+	rJson, err := regexp.Compile(`video_url: '.*?'`)
+	if err != nil {
+		panic(err)
+	}
+	videoUrl := rJson.FindString(json)
+	videoUrl = videoUrl[16:len(videoUrl) - 1]
+	/*
+	e.g:
+_file/3/271eae19e43854870ff86e424b13108f/68000/68901/68901.mp4/
+ 	*/
+	qVideoDownload.Push(queue.Job{Value:videoUrl})
 }
 
 func downloadVideo(u string) (l int64) {
