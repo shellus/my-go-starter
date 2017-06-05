@@ -22,14 +22,26 @@ var c = http.DefaultClient
 
 var qItemPage = queue.NewQueue(5, "ItemPage")
 
-var qVideoDownload = queue.NewQueue(30, "VideoDownload")
+var qVideoDownload = queue.NewQueue(20, "VideoDownload")
 
 func main() {
 
 	qItemPage.Sub(func(j queue.Job) (err error) {
+		defer func (){
+			if r := recover(); r != nil{
+				// todo: 隐瞒错误
+				fmt.Println(r)
+			}
+		}()
 		return praseItemPage(j.Value.(string))
 	})
 	qVideoDownload.Sub(func(j queue.Job) (err error) {
+		defer func (){
+			if r := recover(); r != nil{
+				// todo: 隐瞒错误
+				fmt.Println(r)
+			}
+		}()
 		arr := j.Value.([2]string)
 		return downloadVideo(arr[0], arr[1])
 	})
@@ -171,6 +183,8 @@ _file/3/271eae19e43854870ff86e424b13108f/68000/68901/68901.mp4/
 func downloadVideo(name string, u string) (err error) {
 	fmt.Println("开始下载视频：" + u)
 
+
+	// 请求
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return errors.New(err.Error())
@@ -183,33 +197,29 @@ func downloadVideo(name string, u string) (err error) {
 	if err != nil {
 		return errors.New(err.Error())
 	}
-
 	defer r.Body.Close()
+
 
 	if r.StatusCode != 200 {
 		return errors.New("r.StatusCode is " + util.Itoa(r.StatusCode))
 	}
 
-	f := filepath.Base(u)
 
-	if f == "" {
-		f = util.UUIDv4()
-	}
-
-	if name != "" {
-		f = name + "." + filepath.Ext(u)
-	}
+	// 创建文件
+	f := name + "." + filepath.Ext(u)
 
 	fh, err := os.Create(baseDir + f)
-
-	defer fh.Close()
 
 	if err != nil {
 		return errors.New(err.Error())
 	}
+	defer fh.Close()
 
+
+	// 下载
 	_, err = io.Copy(fh, r.Body)
 
+	// 错误回退
 	if err != nil {
 		os.Remove(baseDir + f)
 		return errors.New(fmt.Sprintf("%s \n%s \n%s", err, baseDir + f, u))

@@ -50,6 +50,12 @@ func (q *queue) Work() {
 func (q *queue) call(j Job) {
 	defer func() {
 		<-q.concurrent
+		// 还是不要拦截这些致命错误了
+		//if r := recover(); r != nil {
+		//	q.Push(j)
+		//	fmt.Println(r)
+		//	fmt.Printf("%T", r)
+		//}
 	}()
 
 	// call
