@@ -6,10 +6,8 @@ import (
 	"container/list"
 	"reflect"
 	"strconv"
-	"queue"
-	"time"
-	"crypto/md5"
-	"encoding/hex"
+	"github.com/pkg/errors"
+	"net/http"
 )
 
 type IntArr []int
@@ -23,42 +21,33 @@ func (a IntArr) sum() int {
 	return s
 }
 func main() {
-	m := md5.New()
-	m.Write([]byte{'3','2','1'})
-	b := m.Sum(nil)
-	fmt.Println(hex.EncodeToString(b))
+	err := test()
 
-	//stringcom()
-	//calc()
-	//array()
-	//mymap()
-	//ex()
-	//mytype()
-	//slice()
-	//mylist()
-	//convert()
-	//queue_test()
+	fmt.Printf("%+v", err)
+}
+func test()(err error){
+	_, err = os.Create("abc/bbc/a.txt");
+	err = errors.New(err.Error())
 
+	return
 }
 
 func queue_test() {
 
-	// 并发2
-	q := queue.NewQueue(2)
 
-	// 订阅
-	q.Sub(func(j queue.Job) {
-		time.Sleep(time.Millisecond * 100)
-		fmt.Println(j.Value.(string))
-	})
 
-	// 发布
-	for i := 0; i < 10; i++ {
-		q.Push(queue.Job{Value:fmt.Sprintf("lalala: %d", i)})
+}
+
+func http_test(){
+
+	// 禁止跳转跟随的http客户端
+	c := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
+	c.Get("")
 
-	// 开始工作
-	q.Work()
 
 }
 
