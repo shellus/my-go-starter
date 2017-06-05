@@ -30,17 +30,17 @@ func (q *queue) Sub(f func(j Job)) {
 	q.subscriber = f
 }
 func (q *queue) Work() {
-	L:
+	//L:
 	for {
 		select {
 		case j := <-q.jobs:
 			q.concurrent <- true
 			go q.call(j)
-		default:
-			for i := 0; i < cap(q.concurrent); i++ {
-				q.concurrent <- true
-			}
-			break L
+		//default:
+		//	for i := 0; i < cap(q.concurrent); i++ {
+		//		q.concurrent <- true
+		//	}
+			//break L
 		}
 	}
 
