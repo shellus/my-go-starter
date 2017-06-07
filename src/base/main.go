@@ -6,8 +6,10 @@ import (
 	"container/list"
 	"reflect"
 	"strconv"
-	"github.com/pkg/errors"
 	"net/http"
+	"queue"
+	"sync"
+	"time"
 )
 
 type IntArr []int
@@ -21,24 +23,30 @@ func (a IntArr) sum() int {
 	return s
 }
 func main() {
-	err := test()
-
-	fmt.Printf("%+v", err)
-}
-func test()(err error){
-	_, err = os.Create("abc/bbc/a.txt");
-	err = errors.New(err.Error())
-
-	return
+	queue_test()
 }
 
 func queue_test() {
 
+	qTest := queue.NewQueue(1, "test")
+	qTest.Sub(func(j queue.Job) (err error) {
+		fmt.Println(j.Value)
+		time.Sleep(time.Second)
+		return nil
+	});
+	go qTest.Work()
 
+	for i := 0; i < 10; i++ {
+		qTest.Push(&queue.Job{Value:"lalala:"+ strconv.Itoa(i)})
+	}
+
+	w := sync.WaitGroup{}
+	w.Add(1)
+	w.Wait()
 
 }
 
-func http_test(){
+func http_test() {
 
 	// 禁止跳转跟随的http客户端
 	c := &http.Client{
@@ -47,7 +55,6 @@ func http_test(){
 		},
 	}
 	c.Get("")
-
 
 }
 
