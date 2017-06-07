@@ -27,21 +27,11 @@ var qVideoDownload = queue.NewQueue(20, "VideoDownload")
 func main() {
 
 	qItemPage.Sub(func(j queue.Job) (err error) {
-		defer func (){
-			if r := recover(); r != nil{
-				// todo: 隐瞒错误
-				fmt.Println(r)
-			}
-		}()
 		return praseItemPage(j.Value.(string))
 	})
 	qVideoDownload.Sub(func(j queue.Job) (err error) {
-		defer func (){
-			if r := recover(); r != nil{
-				// todo: 隐瞒错误
-				fmt.Println(r)
-			}
-		}()
+		fmt.Println(j.Value)
+		// todo 什么鬼，这里怎么断言不了？？？
 		arr := j.Value.([2]string)
 		return downloadVideo(arr[0], arr[1])
 	})
@@ -98,7 +88,7 @@ func parseIndexPage() (err error) {
 			return errors.New(err.Error())
 		}
 		if match {
-			qItemPage.Pub(queue.Job{Value:baseUrl + href})
+			qItemPage.Pub(&queue.Job{Value:baseUrl + href})
 		}
 
 	}
@@ -176,7 +166,7 @@ func praseItemPage(u string) (err error) {
 	e.g:
 _file/3/271eae19e43854870ff86e424b13108f/68000/68901/68901.mp4/
  	*/
-	qVideoDownload.Pub(queue.Job{Value:[2]string{name, baseUrl + videoUrl}})
+	qVideoDownload.Pub(&queue.Job{Value:[2]string{name, baseUrl + videoUrl}})
 	return
 }
 
@@ -229,7 +219,7 @@ func downloadVideo(name string, u string) (err error) {
 
 func handleRequest(req *http.Request) {
 	// 必要
-	req.Header.Set("Cookie", "PHPSESSID=b62sj4dfpajfffdkatkr5ffnd2; _gat=1; kt_tcookie=1; _ga=GA1.2.175262314.1496382929; _gid=GA1.2.205912476.1496382929; kt_is_visited=1")
+	req.Header.Set("Cookie", "PHPSESSID=q5iokr02dtjpd7scg7lqq0hal1; _gat=1; kt_tcookie=1; _ga=GA1.2.175262314.1496382929; _gid=GA1.2.205912476.1496382929; kt_is_visited=1")
 
 	// 非必要
 	req.Header.Set("Referer", "http://www.99vv1.com/videos/68763/d35a82d8802e8b8be6ed19ed98a56c64/")

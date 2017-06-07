@@ -5,9 +5,12 @@ import (
 	"github.com/go-redis/redis"
 	"encoding/json"
 	"time"
+	"github.com/pkg/errors"
 )
 
 const prefix string = "queue"
+
+// is old
 // go的任务队列，或者说goroutine管理器
 // 创建一个queue(NewQueue)并设置并发数，绑定一个消费者(Sub)，然后Push一堆任务。然后Work阻塞执行。执行完了之后，就会退出Work方法。
 
@@ -35,8 +38,15 @@ func NewQueue(concurrentNumber int, channelName string) (q *queue) {
 	return
 }
 
+func (q *queue) listKey() (string) {
+	return prefix + ":list:" + q.channelName
+}
+func (q *queue) runKey() (string) {
+	return prefix + ":run:" + q.channelName
+}
+
 func (q *queue) Pub(j *Job) {
-	q.redis.LPush(prefix + ":" + q.channelName, serialization(j))
+	q.redis.LPush(q.listKey(), serialization(j))
 }
 
 func (q *queue) Sub(f func(j Job) (err error)) {
@@ -45,13 +55,17 @@ func (q *queue) Sub(f func(j Job) (err error)) {
 
 func (q *queue) Work() {
 	for {
-		s, err := q.redis.BRPopLPush(prefix + ":list:" + q.channelName, prefix + ":run:" + q.channelName, time.Minute).Result()
+		s, err := q.redis.BRPopLPush(q.listKey(), q.runKey(), time.Minute).Result()
 		if err != nil {
-
+			fmt.Println(errors.New(err.Error()))
 		}
 
 		j := &Job{}
-		deserialization(s[1], j)
+
+		if err := deserialization(s, j); err != nil {
+			fmt.Println(errors.New(err.Error()))
+
+		}
 		q.concurrent <- true
 		go q.call(j)
 	}
@@ -60,35 +74,38 @@ func (q *queue) Work() {
 /**
 运行中的，全部撤回待运行列表。
  */
-func Restart()(r int) {
-	
-}
+//func Restart()(r int) {
+//
+//}
+func (q *queue) rollback(j *Job) {
+	pipe := q.redis.TxPipeline()
 
+	// 从运行中列表移除job
+	pipe.LRem(q.runKey(), 1, serialization(j))
+
+	// 如果出错，把job放回去
+	pipe.LPush(q.listKey(), serialization(j))
+
+	_, _ = pipe.Exec()
+}
+func (q *queue) done(j *Job) {
+	// 从运行中列表移除job
+	q.redis.LRem(q.runKey(), 1, serialization(j))
+
+}
 func (q *queue) call(j *Job) {
 	defer func() {
 		<-q.concurrent
-		// 还是不要拦截这些致命错误了
-		//if r := recover(); r != nil {
-		//	q.Push(j)
-		//	fmt.Println(r)
-		//	fmt.Printf("%T", r)
-		//}
 	}()
 
 	// call
 	err := q.subscriber(*j)
 
-	pipe := q.redis.TxPipeline()
-	// 从运行中列表移除job
-	pipe.LRem(prefix + ":run:" + q.channelName, 1, serialization(j))
-
-	// 如果出错，把job放回去
 	if err != nil {
-		pipe.LPush(prefix + ":" + q.channelName, serialization(j))
-		fmt.Printf("%+v\n", err)
+		q.rollback(j)
+	} else {
+		q.done(j)
 	}
-	/* todo: 事物失败的情况 */
-	_, err = pipe.Exec()
 
 }
 
