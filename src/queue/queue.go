@@ -23,7 +23,6 @@ type Job struct {
 }
 
 func NewQueue(concurrentNumber int, channelName string) (q *queue) {
-	// channel is back
 	q = &queue{
 		channelName: channelName,
 		concurrent: make(chan bool, concurrentNumber),
@@ -36,13 +35,14 @@ func NewQueue(concurrentNumber int, channelName string) (q *queue) {
 	return
 }
 
-func (q *queue) Push(j *Job) {
+func (q *queue) Pub(j *Job) {
 	q.redis.LPush(prefix + ":" + q.channelName, serialization(j))
 }
 
 func (q *queue) Sub(f func(j Job) (err error)) {
 	q.subscriber = f
 }
+
 func (q *queue) Work() {
 	for {
 		s, err := q.redis.BRPopLPush(prefix + ":list:" + q.channelName, prefix + ":run:" + q.channelName, time.Minute).Result()
@@ -57,6 +57,13 @@ func (q *queue) Work() {
 	}
 
 }
+/**
+运行中的，全部撤回待运行列表。
+ */
+func Restart()(r int) {
+	
+}
+
 func (q *queue) call(j *Job) {
 	defer func() {
 		<-q.concurrent
@@ -71,11 +78,17 @@ func (q *queue) call(j *Job) {
 	// call
 	err := q.subscriber(*j)
 
+	pipe := q.redis.TxPipeline()
+	// 从运行中列表移除job
+	pipe.LRem(prefix + ":run:" + q.channelName, 1, serialization(j))
+
 	// 如果出错，把job放回去
 	if err != nil {
-		q.Push(j)
+		pipe.LPush(prefix + ":" + q.channelName, serialization(j))
 		fmt.Printf("%+v\n", err)
 	}
+	/* todo: 事物失败的情况 */
+	_, err = pipe.Exec()
 
 }
 
