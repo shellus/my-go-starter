@@ -98,7 +98,7 @@ func parseIndexPage() (err error) {
 			return errors.New(err.Error())
 		}
 		if match {
-			qItemPage.Push(queue.Job{Value:baseUrl + href})
+			qItemPage.Pub(queue.Job{Value:baseUrl + href})
 		}
 
 	}
@@ -176,7 +176,7 @@ func praseItemPage(u string) (err error) {
 	e.g:
 _file/3/271eae19e43854870ff86e424b13108f/68000/68901/68901.mp4/
  	*/
-	qVideoDownload.Push(queue.Job{Value:[2]string{name, baseUrl + videoUrl}})
+	qVideoDownload.Pub(queue.Job{Value:[2]string{name, baseUrl + videoUrl}})
 	return
 }
 

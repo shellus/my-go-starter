@@ -66,7 +66,7 @@ func main() {
 			name := s.Find("a.name").Text()
 			href, _ := s.Find("a.name").Attr("href")
 
-			q_cMingXing.Push(queue.Job{
+			q_cMingXing.Pub(queue.Job{
 				Value:
 				MingXingItem{
 					name: name,
@@ -80,7 +80,7 @@ func main() {
 			href, _ := s.Find("a").Attr("href")
 			name = strings.TrimSpace(name)
 
-			q_cMingXing.Push(queue.Job{
+			q_cMingXing.Pub(queue.Job{
 				Value:
 				MingXingItem{
 					name: name,
@@ -109,7 +109,7 @@ func main() {
 
 			name := s.Find("div.cover-title > p > a").Text()
 
-			q_cXiangCe.Push(queue.Job{
+			q_cXiangCe.Pub(queue.Job{
 				Value:
 				XiangCeItem{
 					mingXingItem: &mingXingItem,
@@ -132,7 +132,7 @@ func main() {
 			Each(func(_ int, s *goquery.Selection) {
 			href, _ := s.Find("div.pic > img").Attr("src")
 
-			q_downloader.Push(queue.Job{
+			q_downloader.Pub(queue.Job{
 				Value:
 				TuPianItem{
 					xiangCeItem: &xiangCeItem,
@@ -172,7 +172,7 @@ func main() {
 		io.Copy(file, res.Body)
 	})
 
-	q_cMingXingList.Push(queue.Job{Value:baseUrl + "/mingxing/2/"})
+	q_cMingXingList.Pub(queue.Job{Value:baseUrl + "/mingxing/2/"})
 
 	q_cMingXingList.Work()
 	fmt.Println("列表采集完毕")

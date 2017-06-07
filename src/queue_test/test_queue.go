@@ -16,8 +16,8 @@ func main() {
 		fmt.Println(j.payload)
 	})
 
-	q.Push(MyJob{payload:"hahaha"})
-	q.Push(MyJob{payload:"hahaha2"})
-	q.Push(MyJob{payload:"hahaha3"})
-	q.Push(MyJob{payload:"hahaha4"})
+	q.Pub(MyJob{payload:"hahaha"})
+	q.Pub(MyJob{payload:"hahaha2"})
+	q.Pub(MyJob{payload:"hahaha3"})
+	q.Pub(MyJob{payload:"hahaha4"})
 }

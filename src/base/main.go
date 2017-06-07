@@ -37,7 +37,7 @@ func queue_test() {
 	go qTest.Work()
 
 	for i := 0; i < 10; i++ {
-		qTest.Push(&queue.Job{Value:"lalala:"+ strconv.Itoa(i)})
+		qTest.Pub(&queue.Job{Value:"lalala:"+ strconv.Itoa(i)})
 	}
 
 	w := sync.WaitGroup{}
