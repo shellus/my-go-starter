@@ -57,7 +57,10 @@ func (q *queue) Work() {
 	for {
 		s, err := q.redis.BRPopLPush(q.listKey(), q.runKey(), time.Minute).Result()
 		if err != nil {
-			fmt.Println(errors.New(err.Error()))
+			if err == errors.New("redis: nil") {
+				continue
+			}
+			panic(err)
 		}
 
 		j := &Job{}
