@@ -17,10 +17,17 @@ import (
 	"io/ioutil"
 	"bytes"
 	"net/http/cookiejar"
+	"reflect"
 )
 
 const baseDir string = `C:\Users\shellus\Downloads\sex\`
 const baseUrl string = "http://99vv1.com"
+
+type Re99VideoInfo struct {
+	Url      string
+	Title    string
+	VideoUrl string
+}
 
 var c = http.DefaultClient
 
@@ -47,8 +54,18 @@ func main() {
 		return praseItemPage(j.Value.(string))
 	})
 	qVideoDownload.Sub(func(j queue.Job) (err error) {
-		arr := j.Value.([2]string)
-		return downloadVideo(arr[0], arr[1])
+		maps := j.Value.(map[string]interface{})
+
+		videoInfo := &Re99VideoInfo{}
+		structValue := reflect.ValueOf(videoInfo).Elem()
+
+		for k,v := range maps{
+			structFieldValue := structValue.FieldByName(k)
+			val := reflect.ValueOf(v)
+			structFieldValue.Set(val)
+		}
+
+		return downloadVideo(videoInfo)
 	})
 
 	// 启动工作线程
@@ -56,10 +73,10 @@ func main() {
 	go qVideoDownload.Work()
 
 	// 直接访问首页获得第一批种子
-	err = parseIndexPage()
-	if err != nil {
-		panic(err)
-	}
+	//err = parseIndexPage()
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	// 防止程序退出
 	w := sync.WaitGroup{}
@@ -195,16 +212,22 @@ func praseItemPage(u string) (err error) {
 	e.g:
 _file/3/271eae19e43854870ff86e424b13108f/68000/68901/68901.mp4/
  	*/
-	qVideoDownload.Pub(&queue.Job{Value:[2]string{name, baseUrl + videoUrl}})
+
+	qVideoDownload.Pub(&queue.Job{
+		Value:Re99VideoInfo{
+			Url:u,
+			Title:name,
+			VideoUrl:baseUrl+videoUrl,
+		},
+	})
 	return
 }
 
-func downloadVideo(name string, u string) (err error) {
-	fmt.Println("开始下载视频：" + u)
-
+func downloadVideo(videoInfo *Re99VideoInfo) (err error) {
+	fmt.Println("开始下载视频：" + videoInfo.VideoUrl)
 
 	// 请求
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequest("GET", videoInfo.VideoUrl, nil)
 	if err != nil {
 		return errors.New(err.Error())
 	}
@@ -224,7 +247,7 @@ func downloadVideo(name string, u string) (err error) {
 
 
 	// 创建文件
-	f := name + "." + filepath.Ext(u)
+	f := videoInfo.Title + "." + filepath.Ext(videoInfo.VideoUrl)
 
 	fh, err := os.Create(baseDir + f)
 
@@ -240,7 +263,7 @@ func downloadVideo(name string, u string) (err error) {
 	// 错误回退
 	if err != nil {
 		os.Remove(baseDir + f)
-		return errors.New(fmt.Sprintf("%s \n%s \n%s", err, baseDir + f, u))
+		return errors.New(fmt.Sprintf("%s \n%s \n%s", err, baseDir + f, videoInfo.VideoUrl))
 	}
 	return
 }
@@ -265,19 +288,18 @@ func login() (err error) {
 		return
 	}
 
-
 	buf, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		err = errors.New(err.Error())
 		return
 	}
 
-	if s := bytes.Index(buf, []byte(`<div class="message_error">`)); s != -1{
+	if s := bytes.Index(buf, []byte(`<div class="message_error">`)); s != -1 {
 		s = s + len(`<div class="message_error">`)
 		t := bytes.Index(buf[s:], []byte(`</div>`))
 		text := "未知错误"
-		if t != -1{
-			text = string(buf[s:s+t]);
+		if t != -1 {
+			text = string(buf[s:s + t]);
 		}
 		err = errors.New(fmt.Sprintf("login error: %s", text))
 		return
