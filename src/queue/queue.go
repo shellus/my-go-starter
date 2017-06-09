@@ -102,6 +102,7 @@ func (q *queue) call(j *Job) {
 	err := q.subscriber(*j)
 
 	if err != nil {
+		fmt.Printf("%+v\n", err)
 		q.rollback(j)
 	} else {
 		q.done(j)

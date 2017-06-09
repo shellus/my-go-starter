@@ -13,6 +13,10 @@ import (
 	"golang.org/x/net/html"
 	"fmt"
 	"sync"
+	"net/url"
+	"io/ioutil"
+	"bytes"
+	"net/http/cookiejar"
 )
 
 const baseDir string = `C:\Users\shellus\Downloads\sex\`
@@ -25,30 +29,39 @@ var qItemPage = queue.NewQueue(5, "ItemPage")
 var qVideoDownload = queue.NewQueue(20, "VideoDownload")
 
 func main() {
+	// 持久化cookie
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		panic(err)
+	}
+	c.Jar = jar
 
+	// 模拟登录产生cookie
+	err = login()
+	if err != nil {
+		panic(err)
+	}
+
+	// 准备消费job
 	qItemPage.Sub(func(j queue.Job) (err error) {
 		return praseItemPage(j.Value.(string))
 	})
 	qVideoDownload.Sub(func(j queue.Job) (err error) {
-		fmt.Println(j.Value)
-		// todo 什么鬼，这里怎么断言不了？？？
 		arr := j.Value.([2]string)
 		return downloadVideo(arr[0], arr[1])
 	})
-	//u := "http://99vv1.com/get_file/3/8d4dc711f6a07357db8998b6f334c918/68000/68763/68763.mp4"
-	//u := "http://99vv1.com/get_file/3/437fa99544f68479af41cbd43500b40b/68000/68763/68763_hq.mp4"
-	//downloadVideo(u)
-	//praseItemPage(baseUrl + "videos/68901/2-720p/")
 
-
+	// 启动工作线程
 	go qItemPage.Work()
 	go qVideoDownload.Work()
 
-	err := parseIndexPage()
+	// 直接访问首页获得第一批种子
+	err = parseIndexPage()
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
+	// 防止程序退出
 	w := sync.WaitGroup{}
 	w.Add(1)
 	w.Wait()
@@ -112,7 +125,16 @@ func praseItemPage(u string) (err error) {
 	}
 	defer r.Body.Close()
 
-	doc, err := goquery.NewDocumentFromReader(r.Body)
+	buf, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	if bytes.Index(buf, []byte("请登陆后观看")) != -1 {
+		return errors.New("no login")
+	}
+
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(buf))
 	if err != nil {
 		return errors.New(err.Error())
 	}
@@ -121,6 +143,11 @@ func praseItemPage(u string) (err error) {
 	name := doc.Find("body > div.wrapper > div.content > div > div > div.main > div:nth-child(1) > div > h1").Text()
 
 	script, err := sel.Html()
+	script = html.UnescapeString(script)
+	if len(script) < 20 {
+		return errors.New(fmt.Sprintf("script is empty: %v", script))
+	}
+
 	if err != nil {
 		return errors.New(err.Error())
 	}
@@ -130,7 +157,9 @@ func praseItemPage(u string) (err error) {
 		return errors.New(err.Error())
 	}
 
-	json := html.UnescapeString(rScript.FindString(script)[16:])
+	rScriptr := rScript.FindString(script)
+	ioutil.WriteFile("log.html", buf, os.FileMode(777))
+	json := rScriptr[16:]
 	/*
 	e.g:
 {
@@ -189,7 +218,6 @@ func downloadVideo(name string, u string) (err error) {
 	}
 	defer r.Body.Close()
 
-
 	if r.StatusCode != 200 {
 		return errors.New("r.StatusCode is " + util.Itoa(r.StatusCode))
 	}
@@ -218,11 +246,42 @@ func downloadVideo(name string, u string) (err error) {
 }
 
 func handleRequest(req *http.Request) {
-	// 必要
-	req.Header.Set("Cookie", "PHPSESSID=q5iokr02dtjpd7scg7lqq0hal1; _gat=1; kt_tcookie=1; _ga=GA1.2.175262314.1496382929; _gid=GA1.2.205912476.1496382929; kt_is_visited=1")
-
 	// 非必要
-	req.Header.Set("Referer", "http://www.99vv1.com/videos/68763/d35a82d8802e8b8be6ed19ed98a56c64/")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36")
+	//req.Header.Set("Referer", "http://www.99vv1.com/")
+	//req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36")
 }
 
+func login() (err error) {
+	// 禁止跳转跟随的http客户端
+
+	data := url.Values{
+		"action":[]string{"login"},
+		"username":[]string{"shellus"},
+		"pass":[]string{"a7245810"},
+	}
+
+	res, err := c.PostForm("http://www.99vv1.com/login.php", data)
+	if err != nil {
+		return
+	}
+
+
+	buf, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		err = errors.New(err.Error())
+		return
+	}
+
+	if s := bytes.Index(buf, []byte(`<div class="message_error">`)); s != -1{
+		s = s + len(`<div class="message_error">`)
+		t := bytes.Index(buf[s:], []byte(`</div>`))
+		text := "未知错误"
+		if t != -1{
+			text = string(buf[s:s+t]);
+		}
+		err = errors.New(fmt.Sprintf("login error: %s", text))
+		return
+	}
+
+	return
+}
