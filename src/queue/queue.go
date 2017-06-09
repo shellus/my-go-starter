@@ -57,7 +57,7 @@ func (q *queue) Work() {
 	for {
 		s, err := q.redis.BRPopLPush(q.listKey(), q.runKey(), time.Minute).Result()
 		if err != nil {
-			if err == errors.New("redis: nil") {
+			if err == redis.Nil {
 				continue
 			}
 			panic(err)
