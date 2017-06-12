@@ -73,10 +73,10 @@ func main() {
 	go qVideoDownload.Work()
 
 	// 直接访问首页获得第一批种子
-	//err = parseIndexPage()
-	//if err != nil {
-	//	panic(err)
-	//}
+	err = parseIndexPage()
+	if err != nil {
+		panic(err)
+	}
 
 	// 防止程序退出
 	w := sync.WaitGroup{}
@@ -245,25 +245,25 @@ func downloadVideo(videoInfo *Re99VideoInfo) (err error) {
 		return errors.New("r.StatusCode is " + util.Itoa(r.StatusCode))
 	}
 
-
 	// 创建文件
-	f := videoInfo.Title + "." + filepath.Ext(videoInfo.VideoUrl)
+	f := videoInfo.Title + filepath.Ext(videoInfo.VideoUrl)
+	f = baseDir + f
 
-	fh, err := os.Create(baseDir + f)
+	fh, err := os.Create(f)
 
 	if err != nil {
 		return errors.New(err.Error())
 	}
-	defer fh.Close()
 
 
 	// 下载
 	_, err = io.Copy(fh, r.Body)
 
+	fh.Close()
 	// 错误回退
 	if err != nil {
-		os.Remove(baseDir + f)
-		return errors.New(fmt.Sprintf("%s \n%s \n%s", err, baseDir + f, videoInfo.VideoUrl))
+		os.Remove(f)
+		return errors.New(fmt.Sprintf("%s \n%s \n%s", err, f, videoInfo.VideoUrl))
 	}
 	return
 }
