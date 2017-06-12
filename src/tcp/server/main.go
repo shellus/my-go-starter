@@ -3,11 +3,15 @@ package main
 import (
 	"net"
 	"log"
+	"fmt"
+	"errors"
 	"io"
 )
 
+var errClose = errors.New("connect close")
+
 func main() {
-	laddr := "127.0.0.1:80"
+	laddr := "127.0.0.1:8081"
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", laddr)
 	ln, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
@@ -15,44 +19,72 @@ func main() {
 		return
 	}
 
-	const msgLen = 512
 	for {
 		c, err := ln.Accept()
 		if err != nil {
-			break
+			panic(err)
 		}
-		// Server connection.
 		go func(c net.Conn) {
 			defer func() {
 				c.Close()
+				onClose(c)
+				if r := recover(); r != nil {
+					fmt.Printf("panic: %+v", r)
+				}
 			}()
-			//c.SetDeadline(time.Now().Add(time.Second * 3)) // Not intended to fire.
+			err = onConnect(c)
 
-
+			if err != nil && err == errClose{
+				return
+			}
 
 			for {
-
-				var buf = make([]byte, 512)
+				var buf = make([]byte, 1024)
 				n, err := c.Read(buf)
-
-				if err == io.EOF {
-					log.Print("client EOL")
-					break
-				}else if err != nil {
-					log.Fatal(err)
+				if err != nil {
+					if err == io.EOF {
+						// 连接断开？
+						break
+					}else {
+						panic(err)
+					}
 				}
 
-				log.Print(string(buf[:n]))
+				err = onRecv(c, buf[:n])
 
-				c.Write([]byte(`HTTP/1.1 200 OK
-Date: Sat, 06 May 2017 07:27:23 GMT
-Content-Type: text/html;charset=utf-8
-Content-Length: 2
+				if err != nil{
+					if err == errClose {
+						break
+					}else {
+						panic(err)
+					}
+				}
 
-ok`))
 			}
 
 		}(c)
 	}
 
+}
+func onConnect(c net.Conn)(err error) {
+	fmt.Println("onConnect")
+	return nil
+}
+func onClose(c net.Conn) {
+	fmt.Println("onClose")
+	return
+}
+func onRecv(c net.Conn, data []byte)(err error) {
+	fmt.Println("onRecv")
+	//fmt.Println(string(data))
+
+	c.Write([]byte(`HTTP/1.1 200 OK
+Date: Sat, 06 May 2017 07:27:23 GMT
+Connection: keep-alive
+Content-Type: text/html;charset=utf-8
+Content-Length: 2
+
+ok`))
+	//return errClose
+	return nil
 }
