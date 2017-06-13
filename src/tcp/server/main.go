@@ -6,18 +6,21 @@ import (
 	"fmt"
 	"errors"
 	"io"
+	"strconv"
 )
 
 var errClose = errors.New("connect close")
 
 func main() {
 	laddr := "127.0.0.1:8081"
-	tcpAddr, err := net.ResolveTCPAddr("tcp4", laddr)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", laddr)
 	ln, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
+
+	fmt.Println("server init")
 
 	for {
 		c, err := ln.Accept()
@@ -66,25 +69,32 @@ func main() {
 	}
 
 }
+
+var arr = make(map [net.Conn]int)
+
 func onConnect(c net.Conn)(err error) {
+	arr[c] = 0
 	fmt.Println("onConnect")
 	return nil
 }
 func onClose(c net.Conn) {
+	delete(arr, c)
 	fmt.Println("onClose")
 	return
 }
 func onRecv(c net.Conn, data []byte)(err error) {
+	arr[c] += 1
 	fmt.Println("onRecv")
 	//fmt.Println(string(data))
 
-	c.Write([]byte(`HTTP/1.1 200 OK
+	body := "ok:" + strconv.Itoa(arr[c])
+	c.Write([]byte(fmt.Sprintf(`HTTP/1.1 200 OK
 Date: Sat, 06 May 2017 07:27:23 GMT
 Connection: keep-alive
 Content-Type: text/html;charset=utf-8
-Content-Length: 2
+Content-Length: %d
 
-ok`))
+%s`, len(body), body)))
 	//return errClose
 	return nil
 }
