@@ -10,20 +10,34 @@ import (
 	"queue"
 	"sync"
 	"time"
+	"github.com/pkg/errors"
+	"regexp"
+	"io/ioutil"
+	"bytes"
+	"github.com/antonholmquist/jason"
 )
 
-type IntArr []int
+func JsonFractalTest() {
+	s, _ := ioutil.ReadFile("itemSctipt.js")
 
-func (a IntArr) sum() int {
-	s := 0
+	s = JsonFractal(s)
 
-	for _, i := range a {
-		s = s + i
+	j, err := jason.NewObjectFromBytes(s)
+	if err != nil {
+		panic(err)
 	}
-	return s
+	fmt.Println(j.GetString("preview_url"))
 }
-func main() {
-	queue_test()
+
+func JsonFractal(s []byte)([]byte){
+	r,_ := regexp.Compile(`[\w_-]+?: `)
+	s = r.ReplaceAllFunc(s, func(s []byte) []byte { return []byte("\"" + string(s[0:len(s)-2]) + "\": ") })
+	s = bytes.Replace(s, []byte{39}, []byte{34}, -1)
+	s = bytes.Replace(s, []byte{10}, []byte{}, -1)
+	s = bytes.Replace(s, []byte{13}, []byte{}, -1)
+	s = bytes.Replace(s, []byte{9},  []byte{}, -1)
+	s = bytes.Replace(s, []byte{32},  []byte{}, -1)
+	return s
 }
 
 func queue_test() {
@@ -37,13 +51,13 @@ func queue_test() {
 	go qTest.Work()
 
 	for i := 0; i < 10; i++ {
-		qTest.Pub(&queue.Job{Value:"lalala:"+ strconv.Itoa(i)})
+		qTest.Pub(&queue.Job{Value:"lalala:" + strconv.Itoa(i)})
 	}
 
 	w := sync.WaitGroup{}
 	w.Add(1)
 	w.Wait()
-
+	errors.New("")
 }
 
 func http_test() {

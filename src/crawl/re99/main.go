@@ -18,15 +18,17 @@ import (
 	"bytes"
 	"net/http/cookiejar"
 	"reflect"
+	"github.com/antonholmquist/jason"
 )
 
 const baseDir string = `C:\Users\shellus\Downloads\sex\`
 const baseUrl string = "http://99vv1.com"
 
 type Re99VideoInfo struct {
-	Url      string
-	Title    string
-	VideoUrl string
+	Url        string
+	Title      string
+	VideoUrl   string
+	PreviewUrl string
 }
 
 var c = http.DefaultClient
@@ -59,7 +61,7 @@ func main() {
 		videoInfo := &Re99VideoInfo{}
 		structValue := reflect.ValueOf(videoInfo).Elem()
 
-		for k,v := range maps{
+		for k, v := range maps {
 			structFieldValue := structValue.FieldByName(k)
 			val := reflect.ValueOf(v)
 			structFieldValue.Set(val)
@@ -125,7 +127,16 @@ func parseIndexPage() (err error) {
 	return
 
 }
-
+func JsonFractal(s []byte)([]byte){
+	r,_ := regexp.Compile(`[\w_-]+?: `)
+	s = r.ReplaceAllFunc(s, func(s []byte) []byte { return []byte("\"" + string(s[0:len(s)-2]) + "\": ") })
+	s = bytes.Replace(s, []byte{39}, []byte{34}, -1)
+	s = bytes.Replace(s, []byte{10}, []byte{}, -1)
+	s = bytes.Replace(s, []byte{13}, []byte{}, -1)
+	s = bytes.Replace(s, []byte{9},  []byte{}, -1)
+	s = bytes.Replace(s, []byte{32},  []byte{}, -1)
+	return s
+}
 func praseItemPage(u string) (err error) {
 	fmt.Println("开始解析页面：" + u)
 
@@ -143,6 +154,7 @@ func praseItemPage(u string) (err error) {
 	defer r.Body.Close()
 
 	buf, err := ioutil.ReadAll(r.Body)
+	ioutil.WriteFile("log.html", buf, os.FileMode(0))
 	if err != nil {
 		return errors.New(err.Error())
 	}
@@ -169,14 +181,22 @@ func praseItemPage(u string) (err error) {
 		return errors.New(err.Error())
 	}
 
-	rScript, err := regexp.Compile(`var flashvars = \{([\s\S]*?)\}`)
+	rScript, err := regexp.Compile(`var flashvars = (\{([\s\S]*?)\})`)
 	if err != nil {
 		return errors.New(err.Error())
 	}
 
-	rScriptr := rScript.FindString(script)
-	ioutil.WriteFile("log.html", buf, os.FileMode(777))
-	json := rScriptr[16:]
+	rScriptr := rScript.FindStringSubmatch(script)
+	//ioutil.WriteFile("log.html", buf, os.FileMode(777))
+	jsonBytes := []byte(rScriptr[1])
+
+	jsonBytes = JsonFractal(jsonBytes)
+
+	jsonStruct, err := jason.NewObjectFromBytes(jsonBytes)
+	if err != nil {
+		panic(err)
+	}
+
 	/*
 	e.g:
 {
@@ -202,22 +222,21 @@ func praseItemPage(u string) (err error) {
 }
 	 */
 
-	rJson, err := regexp.Compile(`video_url: '.*?'`)
+	videoUrl, err := jsonStruct.GetString("video_url")
 	if err != nil {
-		return errors.New(err.Error())
+		panic(err)
 	}
-	videoUrl := rJson.FindString(json)
-	videoUrl = videoUrl[12:len(videoUrl) - 2]
-	/*
-	e.g:
-_file/3/271eae19e43854870ff86e424b13108f/68000/68901/68901.mp4/
- 	*/
+	previewUrl, err := jsonStruct.GetString("preview_url")
+	if err != nil {
+		panic(err)
+	}
 
 	qVideoDownload.Pub(&queue.Job{
 		Value:Re99VideoInfo{
 			Url:u,
 			Title:name,
-			VideoUrl:baseUrl+videoUrl,
+			VideoUrl:baseUrl + videoUrl,
+			PreviewUrl:previewUrl,
 		},
 	})
 	return
