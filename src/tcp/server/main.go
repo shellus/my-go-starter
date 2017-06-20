@@ -12,7 +12,7 @@ import (
 var errClose = errors.New("connect close")
 
 func main() {
-	laddr := "127.0.0.1:8081"
+	laddr := "0.0.0.0:81"
 	tcpAddr, err := net.ResolveTCPAddr("tcp", laddr)
 	ln, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
@@ -74,18 +74,19 @@ var arr = make(map [net.Conn]int)
 
 func onConnect(c net.Conn)(err error) {
 	arr[c] = 0
-	fmt.Println("onConnect")
+	fmt.Println("onConnect" + c.RemoteAddr().String())
 	return nil
 }
 func onClose(c net.Conn) {
 	delete(arr, c)
-	fmt.Println("onClose")
+	fmt.Println("onClose" + c.RemoteAddr().String())
 	return
 }
 func onRecv(c net.Conn, data []byte)(err error) {
 	arr[c] += 1
-	fmt.Println("onRecv")
-	//fmt.Println(string(data))
+	fmt.Println("onRecv" + c.RemoteAddr().String()+" "+strconv.Itoa(arr[c]))
+	fmt.Println(data)
+	fmt.Println(string(data))
 
 	body := "ok:" + strconv.Itoa(arr[c])
 	c.Write([]byte(fmt.Sprintf(`HTTP/1.1 200 OK
