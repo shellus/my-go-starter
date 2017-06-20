@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>JS AES 解密</title>
+    <style>
+        #clearText {
+            height: 300px;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.05);
+            width: 100%;
+        }
+        body{
+            margin: 0 auto;
+            width: 700px;
+        }
+    </style>
+</head>
+<body>
+<h1>JS AES 解密</h1>
+<form onsubmit="return false;">
+    <table>
+        <tr>
+            <td>网址：</td>
+            <td>
+                <input type="text" id="cipherUrl" title="" value="http://cdn.endaosi.com/.ossutilconfig.aes">
+            </td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>
+                <button type="submit" onclick="fetchCipher();">拉取密文</button>
+            </td>
+        </tr>
+
+        <tr>
+            <td>密文：</td>
+            <td>
+                <textarea rows="10" id="cipher" title=""></textarea>
+            </td>
+        </tr>
+        <tr>
+            <td>输入密码：</td>
+            <td>
+                <input type="password" id="ciphertext" title="" value="">
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <button type="submit" onclick="decrypt();">解密↓</button>
+            </td>
+            <td>
+                <button type="submit" onclick="encrypt();">加密↑</button>
+            </td>
+        </tr>
+
+    </table>
+</form>
+<span>输出：</span>
+<textarea id="clearText"></textarea>
+
+<script type="text/javascript" src="//cdn.endaosi.com/libs/jquery.min.js"></script>
+<script type="text/javascript" src="//cdn.endaosi.com/libs/crypto-js.js"></script>
+<script type="text/javascript">
+
+    function fetchCipher() {
+        var cipherUrl = $('#cipherUrl').val();
+        $.get(cipherUrl).success(function (c) {
+            $('#cipher').val(c);
+        });
+    }
+    function encrypt() {
+        var clearText = $("#clearText").html(text)
+        var ciphertext = $('#ciphertext').val();
+        var options = {mode: CryptoJS.mode.CFB, padding: CryptoJS.pad.Iso97971};
+        var bytes = CryptoJS.AES.encrypt(c, ciphertext, options);
+        // todo 解密
+    }
+
+    function decrypt() {
+        var c = $('#cipher').val();
+        c = c.replace(/\n/g, '');
+        var ciphertext = $('#ciphertext').val();
+        var options = {mode: CryptoJS.mode.CFB, padding: CryptoJS.pad.Iso97971};
+        var bytes = CryptoJS.AES.decrypt(c, ciphertext, options);
+
+        try {
+            var text = bytes.toString(CryptoJS.enc.Utf8);
+            $("#clearText").html(text)
+        }catch (err){
+            alert("密文非UTF8文本：" + err)
+        }
+    }
+</script>
+</body>
+</html>
