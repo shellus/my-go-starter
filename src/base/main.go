@@ -14,8 +14,35 @@ import (
 	"regexp"
 	"io/ioutil"
 	"bytes"
-	"github.com/antonholmquist/jason"
+	"github.com/shellus/jason"
+	"net/url"
 )
+
+type MyStruct struct {
+	name string
+}
+func main(){
+
+}
+func httpProxyAccess(){
+	proxy := func(_ *http.Request) (*url.URL, error) {
+		return url.Parse("http://27.46.74.63:9999")
+	}
+
+	transport := &http.Transport{Proxy: proxy}
+
+	client := &http.Client{Transport: transport}
+
+	rest, err := client.Get("http://www.tianyancha.com/company/1534045940")
+	if err != nil {
+		panic(err)
+	}
+	buf , err := ioutil.ReadAll(rest.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(buf))
+}
 
 func JsonFractalTest() {
 	s, _ := ioutil.ReadFile("itemSctipt.js")
