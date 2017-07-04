@@ -3,6 +3,10 @@ package main
 import (
 	"net/http"
 	"encoding/json"
+	"os/signal"
+	"os"
+	"fmt"
+	"context"
 )
 
 // api 接口返回的通用格式
@@ -19,9 +23,12 @@ type UserData struct {
 }
 
 func main() {
-	http.Handle("/asset/", http.StripPrefix("/asset/", http.FileServer(http.Dir(`asset`))))
+	mux := http.NewServeMux()
+	serverTls := &http.Server{Addr: ":443", Handler: mux}
 
-	http.HandleFunc("/api/login", func(w http.ResponseWriter, req *http.Request) {
+	mux.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir(`asset`))))
+
+	mux.HandleFunc("/api/login", func(w http.ResponseWriter, req *http.Request) {
 
 		// 定义返回值
 		r := ApiResponse{
@@ -43,6 +50,26 @@ func main() {
 		w.Write(j)
 	})
 
-	http.ListenAndServe(":8080", nil)
+	go func() {
+		err := serverTls.ListenAndServeTLS("letsencrypt/local/cert1.pem", "letsencrypt/local/privkey1.pem")
+		if err != nil && err != http.ErrServerClosed {
+			panic(err)
+		}
+	}()
+
+
+	fmt.Printf("serverTls Listen: %s!\n", serverTls.Addr)
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	<-c
+
+	err := serverTls.Shutdown(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
+
 }
 
