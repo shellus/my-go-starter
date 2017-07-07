@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"log"
 	"github.com/elazarl/goproxy"
+	"github.com/xtaci/kcp-go"
 )
 
 func main() {
@@ -12,22 +13,26 @@ func main() {
 
 	proxy.OnRequest().DoFunc(
 		func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
-			host := "www.google.com"
-
-			log.Println(r.Header.Get("Host"))
-
-			r.Header.Set("Host", host)
-			r.Host = host
-			r.URL.Host = host
-			r.URL.Scheme = "https"
 			return r, nil
 		})
 
 	http.Handle("/", proxy)
 
-	err := http.ListenAndServe(":8080", nil)
+	server := &http.Server{Addr: ":8080", Handler: nil}
+	err := ListenAndServe(server)
 
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+func ListenAndServe(srv *http.Server) error {
+	addr := srv.Addr
+	if addr == "" {
+		addr = ":http"
+	}
+	ln, err := kcp.ListenWithOptions(addr, nil, 10, 3)
+	if err != nil {
+		return err
+	}
+	return srv.Serve(ln)
 }
