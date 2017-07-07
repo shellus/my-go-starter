@@ -23,6 +23,9 @@ func random(min, max int) int {
 func New(b []byte) *Reader {
 	return &Reader{b, 0}
 }
+func (r *Reader) Write(b []byte){
+	r.s = append(r.s, b[:]...)
+}
 
 func (r *Reader) Read(b []byte) (n int, err error) {
 	if r.i >= len(r.s) {
