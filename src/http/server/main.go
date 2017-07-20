@@ -24,7 +24,7 @@ type UserData struct {
 
 func main() {
 	mux := http.NewServeMux()
-	serverTls := &http.Server{Addr: ":443", Handler: mux}
+	serverTls := &http.Server{Addr: ":80", Handler: mux}
 
 	mux.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir(`asset`))))
 
@@ -51,7 +51,7 @@ func main() {
 	})
 
 	go func() {
-		err := serverTls.ListenAndServeTLS("letsencrypt/local/cert1.pem", "letsencrypt/local/privkey1.pem")
+		err := serverTls.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
 			panic(err)
 		}
